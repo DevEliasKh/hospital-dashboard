@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-export default function SectionSelector({ onSelect, selectedId }) {
+// src/components/SectionSelector.jsx - قسمت اصلی را به‌روز کنید
+export default function SectionSelector({
+    onSelect,
+    selectedId,
+    userRole,
+    userSectionId,
+}) {
     const [sections, setSections] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -9,36 +15,24 @@ export default function SectionSelector({ onSelect, selectedId }) {
     useEffect(() => {
         const fetchSections = async () => {
             setLoading(true);
-            setError(null);
-
             try {
-                const { data, error } = await supabase
-                    .from('sections')
-                    .select('*')
-                    .order('name');
-                if (error) {
-                    throw new Error(
-                        `Supabase error: ${error.message} (${error.code})`
-                    );
+                let query = supabase.from('sections').select('*').order('name');
+
+                // اگر سرپرستار است، فقط بخش خودش را ببیند
+                if (userRole === 'head_nurse' && userSectionId) {
+                    query = query.eq('id', userSectionId);
                 }
 
-                if (!data || data.length === 0) {
-                    setError(
-                        'هیچ بخشی در دیتابیس یافت نشد. لطفاً ابتدا بخش‌ها را اضافه کنید.'
-                    );
-                    setSections([]);
-                    return;
-                }
+                const { data, error } = await query;
 
-                setSections(data);
+                if (error) throw error;
 
-                // انتخاب اولین بخش به صورت پیش‌فرض
-                if (!selectedId && data.length > 0) {
+                setSections(data || []);
+                if (data && data.length > 0 && !selectedId) {
                     onSelect(data[0].id);
                 }
             } catch (err) {
-                console.error('❌ Error in fetchSections:', err);
-                setError('خطا در دریافت اطلاعات بخش‌ها: ' + err.message);
+                setError(err.message);
             } finally {
                 setLoading(false);
             }

@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-export default function ShiftTable({ sectionId, month, year }) {
-    const [personnel, setPersonnel] = useState([]);
+export default function ShiftTable({
+    sectionId,
+    month,
+    year,
+    canEdit,
+    userRole,
+    userSectionId,
+}) {
+    const [personnelList, setPersonnelList] = useState([]);
     const [shifts, setShifts] = useState({});
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState({});
@@ -18,7 +25,7 @@ export default function ShiftTable({ sectionId, month, year }) {
                 .eq('section_id', sectionId)
                 .order('name');
 
-            if (data) setPersonnel(data);
+            if (data) setPersonnelList(data);
         };
         fetchPersonnel();
     }, [sectionId]);
@@ -45,6 +52,14 @@ export default function ShiftTable({ sectionId, month, year }) {
         fetchShifts();
     }, [sectionId, month, year, daysInMonth]);
 
+    if (userRole === 'head_nurse' && userSectionId !== sectionId) {
+        return (
+            <div className='error-message'>
+                شما فقط دسترسی به بخش خودتان را دارید
+            </div>
+        );
+    }
+
     const updateShift = async (personnelId, date, shiftType) => {
         const key = `${personnelId}_${date}`;
         setUpdating((prev) => ({ ...prev, [key]: true }));
@@ -56,6 +71,18 @@ export default function ShiftTable({ sectionId, month, year }) {
             updated_at: new Date().toISOString(),
         });
 
+        if (!canEdit) {
+            alert('شما اجازه تغییر شیفت را ندارید');
+            return;
+        }
+
+        if (userRole === 'head_nurse') {
+            const personnel = personnelList.find((p) => p.id === personnelId);
+            if (personnel?.section_id !== userSectionId) {
+                alert('شما فقط می‌توانید شیفت پرسنل بخش خودتان را تغییر دهید');
+                return;
+            }
+        }
         if (!error) {
             setShifts((prev) => ({
                 ...prev,
@@ -100,7 +127,7 @@ export default function ShiftTable({ sectionId, month, year }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {personnel.map((person) => (
+                    {personnelList.map((person) => (
                         <tr key={person.id}>
                             <td className='person-name'>{person.name}</td>
                             {[...Array(daysInMonth)].map((_, dayIndex) => {
@@ -120,7 +147,7 @@ export default function ShiftTable({ sectionId, month, year }) {
                                                     e.target.value
                                                 )
                                             }
-                                            disabled={isUpdating}
+                                            disabled={isUpdating || !canEdit}
                                             style={{
                                                 backgroundColor: currentShift
                                                     ? shiftColors[currentShift]

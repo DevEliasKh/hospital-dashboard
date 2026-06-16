@@ -5,39 +5,61 @@ import ShiftTable from './components/ShiftTable';
 import SectionSelector from './components/SectionSelector';
 import Header from './components/Header';
 import AdminPanel from './components/AdminPanel';
+import UserManagement from './components/UserManagement';
 import './App.css';
 
 function App() {
     const [session, setSession] = useState(null);
+    const [userProfile, setUserProfile] = useState(null);
     const [selectedSection, setSelectedSection] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [showAdmin, setShowAdmin] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [showUsers, setShowUsers] = useState(false);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-            // بررسی نقش کاربر (ادمین)
-            checkUserRole(session?.user?.email);
+            if (session?.user) {
+                fetchUserProfile(session.user.id);
+            }
         });
 
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
-            checkUserRole(session?.user?.email);
+            if (session?.user) {
+                fetchUserProfile(session.user.id);
+            } else {
+                setUserProfile(null);
+            }
         });
 
         return () => subscription.unsubscribe();
     }, []);
 
-    // بررسی ادمین بودن (بر اساس ایمیل)
-    const checkUserRole = (email) => {
-        // شما می‌توانید این لیست را در دیتابیس هم ذخیره کنید
-        const adminEmails = ['admin@hospital.com', 'manager@hospital.com'];
-        setIsAdmin(adminEmails.includes(email));
+    const fetchUserProfile = async (userId) => {
+        const { data, error } = await supabase
+            .from('user_profiles')
+            .select('*, sections(name)')
+            .eq('id', userId)
+            .single();
+        if (!error && data) {
+            setUserProfile(data);
+            // اگر سرپرستار است، بخش خودش را انتخاب کن
+            if (data.role === 'head_nurse' && data.section_id) {
+                setSelectedSection(data.section_id);
+            }
+        }
     };
+
+    // بررسی دسترسی‌ها
+    const isAdmin = userProfile?.role === 'admin';
+    const isHeadNurse = userProfile?.role === 'head_nurse';
+    const isViewer = userProfile?.role === 'viewer';
+    const canEdit = isAdmin || isHeadNurse;
+    const userSectionId = userProfile?.section_id;
 
     if (!session) {
         return <Login />;
@@ -47,17 +69,32 @@ function App() {
         <div className='app'>
             <Header
                 user={session.user}
+                userProfile={userProfile}
                 isAdmin={isAdmin}
-                onAdminToggle={() => setShowAdmin(!showAdmin)}
+                onAdminToggle={() => {
+                    setShowAdmin(!showAdmin);
+                    setShowUsers(false);
+                }}
+                onUsersToggle={() => {
+                    setShowUsers(!showUsers);
+                    setShowAdmin(false);
+                }}
                 showAdmin={showAdmin}
+                showUsers={showUsers}
             />
 
-            {!showAdmin ? (
+            {showAdmin && isAdmin ? (
+                <AdminPanel />
+            ) : showUsers && isAdmin ? (
+                <UserManagement />
+            ) : (
                 <>
                     <div className='controls'>
                         <SectionSelector
                             onSelect={setSelectedSection}
                             selectedId={selectedSection}
+                            userRole={userProfile?.role}
+                            userSectionId={userSectionId}
                         />
 
                         <div className='month-nav'>
@@ -90,11 +127,12 @@ function App() {
                             sectionId={selectedSection}
                             month={currentMonth}
                             year={currentYear}
+                            canEdit={canEdit}
+                            userRole={userProfile?.role}
+                            userSectionId={userSectionId}
                         />
                     )}
                 </>
-            ) : (
-                <AdminPanel />
             )}
         </div>
     );

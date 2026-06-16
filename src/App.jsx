@@ -1,8 +1,10 @@
+// src/App.jsx
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import ShiftTable from './components/ShiftTable';
 import SectionSelector from './components/SectionSelector';
 import Header from './components/Header';
+import AdminPanel from './components/AdminPanel';
 import './App.css';
 
 function App() {
@@ -10,21 +12,32 @@ function App() {
     const [selectedSection, setSelectedSection] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+    const [showAdmin, setShowAdmin] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
-        // بررسی وضعیت لاگین
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
+            // بررسی نقش کاربر (ادمین)
+            checkUserRole(session?.user?.email);
         });
 
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
+            checkUserRole(session?.user?.email);
         });
 
         return () => subscription.unsubscribe();
     }, []);
+
+    // بررسی ادمین بودن (بر اساس ایمیل)
+    const checkUserRole = (email) => {
+        // شما می‌توانید این لیست را در دیتابیس هم ذخیره کنید
+        const adminEmails = ['admin@hospital.com', 'manager@hospital.com'];
+        setIsAdmin(adminEmails.includes(email));
+    };
 
     if (!session) {
         return <Login />;
@@ -32,41 +45,56 @@ function App() {
 
     return (
         <div className='app'>
-            <Header user={session.user} />
+            <Header
+                user={session.user}
+                isAdmin={isAdmin}
+                onAdminToggle={() => setShowAdmin(!showAdmin)}
+                showAdmin={showAdmin}
+            />
 
-            <div className='controls'>
-                <SectionSelector
-                    onSelect={setSelectedSection}
-                    selectedId={selectedSection}
-                />
+            {!showAdmin ? (
+                <>
+                    <div className='controls'>
+                        <SectionSelector
+                            onSelect={setSelectedSection}
+                            selectedId={selectedSection}
+                        />
 
-                <div className='month-nav'>
-                    <button
-                        onClick={() =>
-                            setCurrentMonth((m) => (m === 1 ? 12 : m - 1))
-                        }
-                    >
-                        ◀
-                    </button>
-                    <span>
-                        {currentYear}/{currentMonth}
-                    </span>
-                    <button
-                        onClick={() =>
-                            setCurrentMonth((m) => (m === 12 ? 1 : m + 1))
-                        }
-                    >
-                        ▶
-                    </button>
-                </div>
-            </div>
+                        <div className='month-nav'>
+                            <button
+                                onClick={() =>
+                                    setCurrentMonth((m) =>
+                                        m === 1 ? 12 : m - 1
+                                    )
+                                }
+                            >
+                                ◀
+                            </button>
+                            <span>
+                                {currentYear}/{currentMonth}
+                            </span>
+                            <button
+                                onClick={() =>
+                                    setCurrentMonth((m) =>
+                                        m === 12 ? 1 : m + 1
+                                    )
+                                }
+                            >
+                                ▶
+                            </button>
+                        </div>
+                    </div>
 
-            {selectedSection && (
-                <ShiftTable
-                    sectionId={selectedSection}
-                    month={currentMonth}
-                    year={currentYear}
-                />
+                    {selectedSection && (
+                        <ShiftTable
+                            sectionId={selectedSection}
+                            month={currentMonth}
+                            year={currentYear}
+                        />
+                    )}
+                </>
+            ) : (
+                <AdminPanel />
             )}
         </div>
     );

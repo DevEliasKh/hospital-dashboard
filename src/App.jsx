@@ -144,22 +144,53 @@ function Login() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // src/App.jsx - بخش لاگین را به‌روز کنید
+
+    // در src/App.jsx - هنگام لاگین
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            // 1. لاگین کردن
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        if (error) {
+            if (error) throw error;
+
+            // 2. گرفتن پروفایل کاربر
+            const { data: profile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('role, section_id')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profileError) throw profileError;
+
+            // 3. به‌روزرسانی metadata کاربر
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: {
+                    role: profile.role,
+                    section_id: profile.section_id,
+                },
+            });
+
+            if (updateError) {
+                console.warn('Could not update user metadata:', updateError);
+                // اگر خطا داد، ادامه دهید
+            }
+
+            // 4. رفرش کردن session
+            await supabase.auth.refreshSession();
+        } catch (error) {
             setError(error.message);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
-
     return (
         <div className='login-container'>
             <div className='login-box'>

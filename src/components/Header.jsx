@@ -16,9 +16,9 @@ export default function Header({
 
     const getRoleLabel = () => {
         const roles = {
-            admin: '👑 ادمین',
-            head_nurse: '🧑‍⚕️ سرپرستار',
-            viewer: '👀 بازدیدکننده',
+            admin: 'مدیر سیستم',
+            head_nurse: ' سرپرستار',
+            viewer: ' بازدیدکننده',
         };
         return roles[userProfile?.role] || 'کاربر';
     };
@@ -33,27 +33,28 @@ export default function Header({
                     {user?.email}
                     <span className='role-badge-header'>{getRoleLabel()}</span>
                 </span>
+                <div className='buttons'>
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={onAdminToggle}
+                                className={`admin-toggle-btn ${showAdmin ? 'active' : ''}`}
+                            >
+                                {showAdmin ? '📋 شیفت‌ها' : '🏢 مدیریت'}
+                            </button>
+                            <button
+                                onClick={onUsersToggle}
+                                className={`admin-toggle-btn ${showUsers ? 'active' : ''}`}
+                            >
+                                {showUsers ? '📋 شیفت‌ها' : '👥 کاربران'}
+                            </button>
+                        </>
+                    )}
 
-                {isAdmin && (
-                    <>
-                        <button
-                            onClick={onAdminToggle}
-                            className={`admin-toggle-btn ${showAdmin ? 'active' : ''}`}
-                        >
-                            {showAdmin ? '📋 شیفت‌ها' : '🏢 مدیریت'}
-                        </button>
-                        <button
-                            onClick={onUsersToggle}
-                            className={`admin-toggle-btn ${showUsers ? 'active' : ''}`}
-                        >
-                            {showUsers ? '📋 شیفت‌ها' : '👥 کاربران'}
-                        </button>
-                    </>
-                )}
-
-                <button onClick={handleLogout} className='logout-btn'>
-                    خروج
-                </button>
+                    <button onClick={handleLogout} className='logout-btn'>
+                        خروج
+                    </button>
+                </div>
             </div>
         </header>
     );

@@ -151,7 +151,7 @@ export default function UserManagement() {
                     <h3>➕ اضافه کردن کاربر جدید</h3>
                     <form onSubmit={addUser}>
                         <input
-                            type='email'
+                            type='text'
                             placeholder='ایمیل'
                             value={newUser.email}
                             onChange={(e) =>

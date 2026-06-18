@@ -215,9 +215,7 @@ function Login() {
                         {loading ? 'در حال ورود...' : 'ورود'}
                     </button>
                 </form>
-                <p className='hint'>
-                    برای تست: admin@hospital.com / password123
-                </p>
+                <p className='hint'>برای تست: admin@hospital.com /</p>
             </div>
         </div>
     );

@@ -1,0 +1,5 @@
+{
+    "cSpell.words": ["supabase"],
+    "editor.tabSize": 4,
+    "prettier.configPath": ".prettierrc.json"
+}
